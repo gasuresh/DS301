@@ -21,8 +21,6 @@ head(Boston)
 
 ### Problem #1: Multiple Linear Regression
 
-1a. **Final model**
-
 ```{r}
 regfit <- regsubsets(medv ~ ., data = Boston, nbest=1, nvmax = 12)
 
@@ -46,11 +44,14 @@ predictors_smallest_Cp <- names(coef(regfit, id = which.min(subset_table$Cp)))
 
 potential_model_predictors <- predictors_smallest_BIC[!predictors_smallest_BIC %in% "(Intercept)"]
 
-potential_formula <- as.formula(paste("medv ~", paste(best_model_predictors, collapse = " + ")))
+potential_formula <- as.formula(paste("medv ~", paste(potential_model_predictors, collapse = " + ")))
 
 temp_model <- lm(potential_formula, data = Boston)
 
 ```
+
+1a. **Final model**
+
 
 ```{r}
 best_model_predictors <- predictors_smallest_BIC[!predictors_smallest_BIC %in% c("(Intercept)", "tax")]
@@ -65,8 +66,6 @@ predictor_names <- names(coefficients)[-1]
 
 final_model_table <- data.frame(Coefficient = coefficients[-1])
 
-best_model_predictors <- names(coef(best_train, id = best_model_index))
-
 
 print(final_model_table)
 
@@ -76,6 +75,7 @@ print(final_model_table)
 -   We found the final model to include the predictors: crim, zn, chas, nox, rm, dis, rad, ptratio, lstat
 
 ```{r}
+#Trying the validation set approach
 
 n = dim(Boston)[1]
 
@@ -131,13 +131,13 @@ plot(final_model, which = 1)
 
 -   Based on the diagnostics, no modifications need to be made to our final model
 
+1d. **Potential issues**
+
 ```{r}
 vif_values <- vif(temp_model)
 
 modified_vif_values <- vif(final_model)
 ```
-
-1d. **Potential issues**
 
 -   We explore the potential issue of multicollinearity. By calculating the VIF (variance inflation factor) of our model, we can identify potential predictors that are correlated with each other. This method leads us to identify the predictors "rad" and "tax" as being highly correlated with each other as the have VIF values \> 4
 
@@ -145,7 +145,12 @@ modified_vif_values <- vif(final_model)
 
 -   The VIF values were calculated before and after removing the predictor by storing a temporary model that included "tax"
 
+
+1e. **Bias and Variance**
+
 ```{r}
+#1e.
+
 num_folds <- 10
 
 flds <- createFolds(Boston$medv, k = num_folds, list = TRUE, returnTrain = FALSE)
@@ -166,8 +171,6 @@ for(i in 1:num_folds) {
 bias <- mean(MSE_values)
 variance <- var(MSE_values)
 ```
-
-1e. **Bias and Variance**
 
 -   We use cross validation with 10-folds. Based on the average of these results, we will calculate the bias and variance of the model
 
@@ -193,24 +196,27 @@ insurance$region <- factor(insurance$region)
     -   In Part 3, separate models are fitted for males and females. This approach does not consider any interaction between gender and other predictors. It assumes that the relationships between age, BMI, and charges are the same for both genders, which might not be the case
 
 ```{r}
-original_model <- lm(charges ~ age + bmi, data = insurance)
-
-# Male: charges = -6986.82 + 243.19(age) + 327.54(bmi) + 1344.46
-# Female: charges = -6986.82 + 243.19(age) + 327.54(bmi)
+original_model <- lm(charges ~ age + bmi + gender, data = insurance)
 
 male_data <- subset(insurance, gender == "male")
 fit_males <- lm(charges ~ age + bmi, data = male_data)
-# charges = -8012.79 + 238.63(age) + 406.87(bmi)
 
 female_data <- subset(insurance, gender == "female")
 fit_females <- lm(charges ~ age + bmi, data = female_data)
-# charges = -4515.22 + 246.92(age) + 241.32(bmi)
 
 ```
 
-2b.
+```{r}
+#2b.
+modified_model_male <- lm(charges ~ poly(age,2) + bmi + gender, data = insurance)
 
-2c.
+modified_model_female <- lm(charges ~ age + bmi + gender + gender:age + gender:bmi, data = insurance)
+```
+
+
+2b. We see that the above models have coefficients and intercept values that match the individual male and female models
+
+2c. We can fit two versions of the model, one with the interaction term, one without. Then we can apply some criteria like AIC. A lower AIC means a better fit. If the model with the interaction term has a lower AIC, choose that model
 
 
 ### Problem 3: Predictions in the presence of multicollinearity
@@ -218,6 +224,7 @@ fit_females <- lm(charges ~ age + bmi, data = female_data)
 3a. Multicollinearity is a problem for making accurate predictions. With multicollinearity, it's challenging to gauge the true relationship between each independent variable and the dependent variable
 
 ```{r}
+#3b.
 set.seed(42)
 
 x1 <- runif(100)
@@ -233,9 +240,12 @@ Y <- beta0 + beta1 * x1 + beta2 * x2 + error
 
 correlation <- cor(x1, x2)
 ```
+
 3b. The correlation between $x_1$ and $x_2$ is 0.94
 
 ```{r}
+#3c.
+
 train_indices <- sample(1:100, 80)
 train_data <- data.frame(x1 = x1[train_indices], x2 = x2[train_indices], Y = Y[train_indices])
 test_data <- data.frame(x1 = x1[-train_indices], x2 = x2[-train_indices], Y = Y[-train_indices])
@@ -251,6 +261,8 @@ test_mse <- mean((test_data$Y - test_predictions)^2)
 3c. Test MSE = 3.63
 
 ```{r}
+#3d.
+
 test_mses <- numeric(2500)
 
 for (i in 1:2500) {
@@ -278,6 +290,7 @@ hist(test_mses, main = "Histogram of Test MSEs", xlab = "Test MSE")
 3d. We find that the mean test MSE is 4.15. We see that the histogram is slightly right-skewed. A majority of the test MSE values lies around the average test MSE value as expected
 
 ```{r}
+#3e.
 set.seed(24)
 
 x1 <- runif(100)
@@ -297,6 +310,7 @@ correlation <- cor(x1, x2)
 3e. The correlation between $x_1$ and $x_2$ is 0.033
 
 ```{r}
+#3f.
 test_mses_uncorr <- numeric(2500)
 
 for (i in 1:2500) {
@@ -321,8 +335,8 @@ mean_test_mse_uncorr <- mean(test_mses_uncorr)
 hist(test_mses_uncorr, main = "Histogram of Test MSEs (Uncorrelated Predictors)", xlab = "Test MSE")
 ```
 
-3f. When the predictors are not correlated, the average test MSE is $4.88*10^{-30}$
+3f. When the predictors are not correlated, the average test MSE is $4.88*10^{-30}$. Based on the histogram and average test MSE, we see that the value is much lower when the predictors are uncorrelated
 
-3g.
+3g. Multicollinearity does affect our ability to make accurate predictions. We see that when the predictors are not correlated, the test MSE is much lower. By definition, this means that the model with uncorrelated predictors is better at making predictions, as a lower test MSE means that the model generalizes better to unseen data
 
 

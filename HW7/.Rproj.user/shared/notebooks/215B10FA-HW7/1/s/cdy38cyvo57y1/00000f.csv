@@ -12,8 +12,3 @@
 "0","Y <- beta0 + beta1 * x1 + beta2 * x2 + error"
 "0",""
 "0","correlation <- cor(x1, x2)"
-"0","print(correlation)"
-"1","[1]"
-"1"," 0.9404249"
-"1","
-"
