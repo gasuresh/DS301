@@ -1,0 +1,183 @@
+---
+title: "HW2"
+author: "Gautham Suresh"
+date: "2024-01-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ISLR2)
+library(tidyverse)
+```
+
+### Problem #1
+
+1a. Since $Z_j = cX_j$ was scaled by a factor of $c$, $\hat{a_j}$ must be scaled by $\frac{1}{c}$. For the new predictors $Z_j = cX_j$, the coefficients $\hat{a_j}$ can be related to $\hat{\beta_j}$ by the equation: $\hat{a}_j = \frac{\hat{\beta}_j}{c}$
+
+1b. The predictors should be standardized so that they are on the same scale. In this case, age ranges from a limited range, while income can vary significantly. Standardizing the predictors will help prevent predictors with larger scales from disproportionately influencing the regression coefficients and the model fitting process.
+
+1c. **Assumptions needed to fit a least squares regression model**
+
+-   Linearity: The assumption of linearity implies that the relationship between the independent variables (predictors) and the dependent variable (response) can be approximately described by a straight line
+-   Independence: the observations in the dataset are not influenced by each other
+-   Homoscedasticity: the "spread" (difference between your predictions and the actual values) is consistent across all values of the independent variable
+-   Normality of Residuals: the errors in the data follow a bell-shaped curve like a normal distribution
+
+1d. The equation $Y_i = \beta_0 + \beta_1 x_{i1} + \ldots + \beta_p x_{ip} \quad (i = 1, \ldots, n)$ is incorrect. The true population regression model should also include the error term $\epsilon$. The corrected equation would therefore be $Y_i = \beta_0 + \beta_1 x_{i1} + \ldots + \beta_p x_{ip} \quad (i = 1, \ldots, n) + \epsilon_i$
+
+1e. False. Cases such as overfitting and underfitting of the models are counterexamples. Overfitting occurs when the model closely fits the training data but its performance on unseen data (test data) suffers, potentially leading to a higher test MSE. Underfitting occurs when the model is too simple and fails to capture the relationships in the data. This results in higher errors on both training and test data, but the test MSE might still be larger.
+
+1f. When we say that our least square estimates $(\hat{\beta})$ are unbiased, it means that if we were to repeat the data collection process numerous times and calculate the parameter estimates each time, the average of all those estimates would be very close to the true value of the parameter we're trying to estimate
+
+### Problem 2: Multiple linear regression
+
+```{r}
+head(Boston)
+```
+
+```{r}
+set.seed(1)
+```
+
+```{r}
+#2a.
+train_indices <- sample(1:nrow(Boston), 0.7 * nrow(Boston))
+train_data <- Boston[train_indices, ]
+test_data <- Boston[-train_indices, ]
+
+lm_all <- lm(crim ~ ., data = train_data)
+
+train_preds <- predict(lm_all, newdata = train_data)
+train_mse <- mean((train_data$crim - train_preds)^2)
+
+test_preds <- predict(lm_all, newdata = test_data)
+test_mse <- mean((test_data$crim - test_preds)^2)
+
+```
+
+2a. Training MSE = 33.78, Test MSE = 57.61
+
+```{r}
+#2b.
+lm_selected <- lm(crim ~ zn + indus + nox + dis + rad + ptratio + medv, data = train_data)
+
+train_preds_selected <- predict(lm_selected, newdata = train_data)
+train_mse_selected <- mean((train_data$crim - train_preds_selected)^2)
+
+test_preds_selected <- predict(lm_selected, newdata = test_data)
+test_mse_selected <- mean((test_data$crim - test_preds_selected)^2)
+
+```
+
+2b. Training MSE = 34.63, Test MSE = 56.55. The new training MSE is larger while the test MSE is smaller
+
+2c. The model in part (b) was expected to have a larger training MSE compared to part (a). This is because the model in part (a) has more predictors to explain variance in the response variable. By excluding some predictors in part (b), we effectively reduced the amount of data the model has access to, leading to a higher training MSE
+
+2d. Similarly, the model in part (b) was expected to have a larger test MSE compared to part (a). While the model in part (b) may perform well on the training set, it may not generalize as effectively to unseen data due to the smaller number of predictors. This prediction did not line up with the output as the new test MSE was smaller
+
+### Problem 3: Properties of least square estimators via simulations
+
+3a. True values: $\beta_0 = 2, \beta_1 = 3, \beta_2 = 5$
+
+```{r}
+#3b.
+
+n <- 100
+beta_0 = 2
+beta_1 = 3
+beta_2 = 5
+
+X1 <- seq(0, 10, length.out = n)
+X2 <- runif(n)
+
+epsilon <- rnorm(n, mean = 0, sd = 1)
+
+Y <- beta_0 + beta_1 * X1 + beta_2 * log(X2) + epsilon
+
+```
+
+```{r}
+#3c.
+data <- data.frame(X1 = X1, X2 = X2, Y = Y)
+
+ggplot(data, aes(x = X1, y = Y)) +
+  geom_point() +
+  labs(title = "Scatterplot of X1 and Y", x = "X1", y = "Y")
+
+ggplot(data, aes(x = X2, y = Y)) +
+  geom_point() +
+  labs(title = "Scatterplot of X2 and Y", x = "X2", y = "Y")
+```
+
+3c. We can see that the plot of $X_1$ and $Y$ shows a generally positive linear trend with a few outliers. Comparing this result to $X_2$ and $Y$, shows that the respective graph shows a curved and non-linear pattern. Additionally, there is greater dispersion among the points in the 2nd plot
+
+```{r}
+#3d.
+B <- 5000
+b1 <- rep(NA, B)
+
+for (i in 1:B)
+{
+  error <- rnorm(n, 0, 1)
+  Y_new <- beta_0 + beta_1 * X1 + beta_2 * log(X2) + error
+  model <- lm(Y_new ~ X1 + X2, data = data)
+  b1[i] = model$coefficients[[2]]
+}
+
+b1_bias <- mean(b1) - beta_1
+
+```
+
+3d. By running the simulation and using the formula $mean(b1) - \beta_1$, we calculated the bias of $\hat{\beta}_1$ to be -.015. As the value is close to zero,
+
+```{r}
+#3e.
+hist_data <- data.frame(b1)
+
+ggplot(hist_data, aes(x = b1)) +
+  geom_histogram(bins = 50, fill = "skyblue", color = "black", aes(y = after_stat(density)), alpha = 0.8) +
+  geom_vline(xintercept = 3, color = "red", linetype = "dashed") +
+  labs(title = "Distribution of Estimated Coefficient (b1)",
+       x = "Estimated Coefficient (b1)",
+       y = "Density") +
+  theme_minimal()
+
+```
+
+```{r}
+#3f.
+B <- 5000
+b2 <- rep(NA, B)
+
+for (i in 1:B) {
+  error <- rnorm(n, 0, 1)
+  
+  Y_new <- beta_0 + beta_1 * X1 + beta_2 * log(X2) + error
+  
+  model <- lm(Y_new ~ X1 + X2)
+  
+  b2[i] <- coef(model)[[3]]
+}
+
+b2_bias <- mean(b2) - beta_2
+
+```
+
+3f. By running the simulation and using the formula $mean(b2) - \beta_2$, we calculated the bias of $\hat{\beta}_2$ to be 9.98. This large value for bias is to be expected as $\beta_2 * log(X_2)$ is non-linear
+
+```{r}
+#3g.
+hist_data <- data.frame(b2 = b2)
+
+ggplot(hist_data, aes(x = b2)) +
+  geom_histogram(binwidth = 0.1, fill = "skyblue", color = "black", aes(y = after_stat(density)), alpha = 0.8) +
+  geom_vline(xintercept = 5, color = "red", linetype = "dashed") +
+  labs(title = "Distribution of Estimated Coefficient (b2)",
+       x = "Estimated Coefficient (b2)",
+       y = "Density") +
+  theme_minimal()
+```

@@ -1,0 +1,129 @@
+---
+title: "MT1"
+author: "Gautham Suresh"
+date: "2024-02-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Question #1
+
+1. $\beta_2 = 33$
+
+2. Hypothesis Test
+
+- Null Hypothesis: $H_0: \beta_2 = 0$
+- Alternative Hypothesis: $H_1: \beta_2 \neq 0$
+- Test-statistic: Based on the model calculations 6.377
+- Null Hypothesis: Under the null hypothesis, the t-statistic for the variable follows a t-distribution with degrees of freedom equal to the total number of observations minus the number of predictors in the model
+    -   $df = \text{num_observ} - \text{num_pred} = 5000 - 4 = 4996$
+- Conclusion
+  - Since p-value $< \alpha = 0.01$, then reject $H_0$ If we can reject $H_0$, we say our results are statistically significant and $\hat{\beta}_2$ does play a role.
+
+3a. $\sigma^2$ represents the variance of the errors in the model. Without a good estimate it becomes challenging to accurately assess the precision of the regression coefficients. A poor estimate affects the accuracy of hypothesis testing for the regression coefficients and the reliability of confidence intervals
+
+3b. In classical linear regression, the assumption is that the errors ϵ follow a normal distribution. Deviations from normality may affect the accuracy of hypothesis tests, confidence intervals, and predictions based on the model
+
+3c. We would not account for irreducible error if we used a confidence interval. We should instead use a prediction interval
+
+4. Adding a predictor that is meaningful and improves the model's ability to explain the variance in the target variable (quarterly earnings, Y) usually leads to a decrease in the training RSS. This is because the new predictor helps capture more of the variability in the target variable that was previously unaccounted for by the existing predictors (X1, X2, X3, Xn).
+
+5. The new predictor will help the model generalize well to unseen data, usually leading to a decrease in the test MSE. This happens because the new predictor helps the model make more accurate predictions on new data, reducing the overall error.
+
+
+
+### Question #2
+
+1. $B_0 = 4, B_1 = 1, B_2 = 1, B_3 = 1$
+
+
+```{r}
+set.seed(1) # so we all get the same x values. 
+n = 100
+x = runif(n, min = 0, max = 2) 
+error = rnorm(n,0,1)
+y = 4 + x + x^2 + x^3 + error
+train_set = data.frame(x,y)
+
+M1 = lm(y~x,data=train_set)
+M2 = lm(y~poly(x,degree=2),data=train_set)
+M3 = lm(y~poly(x,degree=3),data=train_set)
+M4 = lm(y~poly(x,degree=5),data=train_set)
+M5 = lm(y~poly(x,degree=11),data=train_set)
+
+```
+
+2. True value is 6.44
+
+```{r}
+
+#3.
+set.seed(1)
+
+num_simulations <- 1000
+
+beta0 <- 4
+beta1 <- 1
+beta2 <- 1
+beta3 <- 1
+
+n <- 100
+x <- runif(n, min = 0, max = 2) 
+error <- rnorm(n, 0, 1)
+
+y <- 4 + x + x^2 + x^3 + error
+
+# Initialize matrices to store predicted values
+yhat1 <- matrix(NA, nrow = num_simulations, ncol = 5)
+yhat2 <- matrix(NA, nrow = num_simulations, ncol = 5)
+yhat3 <- matrix(NA, nrow = num_simulations, ncol = 5)
+yhat4 <- matrix(NA, nrow = num_simulations, ncol = 5)
+yhat5 <- matrix(NA, nrow = num_simulations, ncol = 5)
+
+for (i in 1:num_simulations) {
+  # Simulate new Y values
+  error <- rnorm(n, 0, 1)
+  y <- 4 + x + x^2 + x^3 + error
+  
+  train_set <- data.frame(x, y)
+  
+  # Fit models
+  M1 <- lm(y ~ x, data = train_set)
+  M2 <- lm(y ~ poly(x, degree = 2), data = train_set)
+  M3 <- lm(y ~ poly(x, degree = 3), data = train_set)
+  M4 <- lm(y ~ poly(x, degree = 5), data = train_set)
+  M5 <- lm(y ~ poly(x, degree = 11), data = train_set)
+  
+  # Predict for x = 0.9
+  x0 <- 0.9
+  yhat1[i, ] <- predict(M1, newdata = data.frame(x = x0))
+  yhat2[i, ] <- predict(M2, newdata = data.frame(x = x0))
+  yhat3[i, ] <- predict(M3, newdata = data.frame(x = x0))
+  yhat4[i, ] <- predict(M4, newdata = data.frame(x = x0))
+  yhat5[i, ] <- predict(M5, newdata = data.frame(x = x0))
+}
+
+print(predicted_values[1:5, ])
+```
+
+
+```{r}
+#4.
+true_value <- 4 + 0.9 + 0.9^2 + 0.9^3
+
+squared_bias <- apply(predicted_values, 2, function(x) mean((mean(x) - true_value)^2))
+
+
+plot(1:5, squared_bias, type = "b", xlab = "Model Complexity", ylab = "Squared Bias",
+     main = "Squared Bias vs. Model Complexity")
+```
+```{r}
+#5.
+smallest_bias_model <- which.min(squared_bias)
+
+print(smallest_bias_model)
+```
+5. Degree 3 has the smallest bias^2. This makes sense since the true function is a polynomial of degree 3. We can therefore expect M3 to be the most accurate.

@@ -1,0 +1,2 @@
+"0","#1h."
+"0","prediction_interval <- predict(model, newdata = new_data, interval = ""prediction"", level = 0.95)"

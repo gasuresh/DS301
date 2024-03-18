@@ -1,0 +1,4 @@
+"0","#1j."
+"0","new_data$Price <- 450"
+"0",""
+"0","new_confidence_interval <- predict(model, newdata = new_data, interval = ""confidence"", level = 0.95)"

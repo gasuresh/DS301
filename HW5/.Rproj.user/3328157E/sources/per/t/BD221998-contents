@@ -1,0 +1,159 @@
+---
+title: "HW5"
+author: "Gautham Suresh"
+date: "2024-02-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+prostate = read.table("./prostate.data",header=TRUE)
+library(leaps)
+library(ISLR2)
+```
+
+### Problem #1
+
+```{r}
+#1a.
+regfit <- regsubsets(lpsa ~ ., data = prostate, nbest=1, nvmax = 9)
+
+regfit_sum <- summary(regfit)
+
+n = dim(prostate)[1]
+p = rowSums(regfit_sum$which)
+
+adjr2 = regfit_sum$adjr2
+cp = regfit_sum$cp
+rss = regfit_sum$rss
+AIC = n*log(rss/n) + 2*(p)
+BIC = n*log(rss/n) + (p)*log(n)
+
+subset_table <- data.frame(RSS = rss, Adj_R2 = adjr2, Cp = cp, AIC = AIC, BIC = BIC)
+
+
+smallest_AIC <- subset_table[which.min(subset_table$AIC), ]
+smallest_BIC <- subset_table[which.min(subset_table$BIC), ]
+largest_Adj_R2 <- subset_table[which.max(subset_table$Adj_R2), ]
+smallest_Cp <- subset_table[which.min(subset_table$Cp), ]
+
+```
+
+1a. **Approach #1**
+
+-   Smallest AIC: $M_5$
+-   Smallest BIC: $M_3$
+-   Largest Adjusted $R^2$: $M_7$
+-   Smallest Mallow's $C_p$: $M_5$
+-   Yes, each method points to a different model as the optimal choice
+-   We will choose $M_5$ to be the final model as the AIC and Mallow's $C_p$ yielded this result
+
+```{r}
+#1b.
+
+train = subset(prostate,train==TRUE)[,1:9]
+test = subset(prostate,train==FALSE)[,1:9]
+
+best_train = regsubsets(lpsa~.,data=train,nbest=1,nvmax=8)
+
+val_errors = rep(NA,8)
+for(i in 1:8){
+  test_mat = model.matrix(lpsa~.,data=test)
+  
+  coef_m = coef(best_train,id=i)
+
+  pred = test_mat[,names(coef_m)]%*%coef_m
+  val_errors[i] = mean((test$lpsa-pred)^2)
+}
+
+best_model_index <- which.min(val_errors)
+
+best_model_predictors <- names(coef(best_train, id = best_model_index))
+
+best_model_predictors <- best_model_predictors[!best_model_predictors %in% "(Intercept)"]
+
+formula <- as.formula(paste("lpsa ~", paste(best_model_predictors, collapse = " + ")))
+
+final_model <- lm(formula, data = prostate)
+
+```
+
+1b. **Approach #2**
+
+-   We found $M_3$ to be the best model with the predictors "lcavol", "lweight", "svi"
+
+```{r}
+#1c.
+
+k <- 10
+folds <- sample(1:k, nrow(prostate), replace = TRUE)
+
+val_errors <- matrix(NA, nrow = k, ncol = 9)
+
+for (j in 1:k) {
+  test <- prostate[folds == j, ]
+  train <- prostate[folds != j, ]
+  
+  best_train <- regsubsets(lpsa ~ ., data = train, nbest = 1, nvmax = 9)
+  
+  for (i in 1:9) {
+    test_mat <- model.matrix(lpsa ~ ., data = test)
+    coef_m <- coef(best_train, id = i)
+    pred <- test_mat[, names(coef_m)] %*% coef_m
+    val_errors[j, i] <- mean((test$lpsa - pred)^2)
+  }
+}
+
+cv_errors <- apply(val_errors, 2, mean)
+
+best_model_size <- which.min(cv_errors)
+
+final_model <- regsubsets(lpsa ~ ., data = prostate, nvmax = best_model_size, nbest = 1)
+```
+
+1c. **Approach #3**
+
+i.  CV errors: 0.6719984, 0.6891539, 0.6005791, 0.6175771, 0.6187863, 0.5941413, 0.6078615, 0.6197726, 0.6188429
+ii. Model with the smallest CV error is $M_6$.
+
+### Problem #2
+
+2a. The statement is true. There is a penalty for including irrelevant predictors in the model. Since each of the models have different predictors, the penalties applied by each model selection method could be heavier for certain models. Therefore, Using AIC, BIC, Mallow’s $C_p$, adjusted $R^2$ could lead us to pick different final models.
+
+2b. False. The RSS values depend on how well each model fits the data. It's possible that $M_3$ with its specific set of predictors could have a smaller RSS than $M_4$ if the predictors in $M_3$ capture the variability in the response variable better than those in $M_4$ for the given data. Therefore, we cannot conclude that $RSS_3 \geq RSS_4$
+
+2c. True. Since $M_2$ is a nested model of $M_4$, the additional predictors in $M_4$ will lead to a lower RSS. Therefore $RSS_2 \geq RSS_4$
+
+2d. AIC and BIC penalize the model for its complexity, which helps in preventing overfitting. While test MSE considers only the goodness of fit, AIC and BIC strike a balance between the goodness of fit and the model's complexity
+
+### Problem #3
+
+3a. List the four assumptions we make when fitting a multiple linear regression model
+
+-   Linearity: The assumption of linearity implies that the relationship between the independent variables (predictors) and the dependent variable (response) can be approximately described by a straight line
+-   Independence: the observations in the dataset are not influenced by each other
+-   Homoscedasticity: the "spread" (difference between your predictions and the actual values) is consistent across all values of the independent variable
+-   Normality of Residuals: the errors in the data follow a bell-shaped curve like a normal distribution
+
+3b. False. In order to fit a multiple linear regression model and obtain least square estimates, we do not necessarily need distributional assumptions on the random error term $\varepsilon_i$. The least squares estimation procedure itself does not require distributional assumptions. It does however play a role in conducting statistical inference
+
+3c. True. These hypothesis tests assume that the random error terms are normally distributed. The p-values are obtained based on this assumption, and violations of the normality assumption may affect the validity of the tests. The assumption is crucial for the validity of the t-tests as they are used to calculate the p-values
+
+3d. Checking every pairwise scatterplot does not account for potential interaction effects between predictor variables. The relationship between $Y$ and $X_j$ may be influenced by the presence of other predictor variables in the model
+
+```{r}
+#3e.
+
+m1 = lm(mpg~horsepower,data=Auto)
+summary(m1)
+par(mfrow=c(2,2))
+plot(m1)
+```
+
+```{r}
+m2 = lm(mpg ~ poly(horsepower, 2, raw = TRUE), data = Auto)
+summary(m2)
+par(mfrow=c(2,2))
+plot(m2)
+```
+
+3e. We use a polynomial regression model of degree 2 to create $m_2$. This model is an improvement over $m_1$ seeing as how the residuals vs fitted graph has a much straighter red line and there is no discernable pattern.

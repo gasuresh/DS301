@@ -1,0 +1,134 @@
+---
+title: "MT1Review"
+author: "Gautham Suresh"
+date: "2024-02-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Question 1: Concept Review
+
+1. True or False? Given the same $X$ values, prediction intervals are wider than confidence
+intervals. Justify your answer.
+  
+  - True
+  - PI: reducible and irreducible
+  - CI: reducible
+
+2. True or False? To evaluate the accuracy of the least square estimates $\hat{\beta}$ for a single dataset, we can obtain the test MSE. Justify your answer.
+
+  - False: We look at standard errors
+
+3. True or False? To estimate the regression coefficients for a polynomial regression model, we minimize the residual sum of squares.
+  
+  - True
+
+4. True or False? Suppose we carry out $N$ hypothesis tests. As $N$ increases, the probability of seeing at least one false discovery (significant result) increases as well. Justify your answer.
+
+  - True. Multiple testing problem
+
+5. True or False? When carrying out a hypothesis test, as n increases, the type 1 error will also decrease. Justify your answer.
+
+  - False
+  - $\alpha = 0.05$ which is fixed. Independent of $n$
+
+6. Suppose the true relationship between the response and a predictor is linear. We fit a polynomial regression model (Model 1: $Y \sim X + X^2 + X^3$) and a standard linear regression model (Model 2: $Y \sim X$). We split our data into a training set and a test set and compute their training MSE and test MSE. Which model would we **expect** to have a smaller training MSE?
+
+  - Model 1
+  
+7. Continue with the same setup as above. Which model (Model 1 or Model 2) would we expect
+to have a smaller test MSE?
+
+  - Model 2 because $Y \sim X$
+  
+8. What is an unbiased estimate for $f(X)$
+
+  - $E(\hat{Y}) = E(\hat{\beta}_0 + \hat{\beta}_1X_1) = \beta_0 + \beta_1X_1 = f(X)$
+
+9. Your colleague (who is inexperienced at machine learning) states that all your models are
+data-driven. That means if you had used a different training set, your trained model would
+look different: your predictions for Y would change. This worries your colleague - how do
+they know which model is the ‘right’ one? What tools do you have at your disposal to address
+their concerns? Explain.
+
+  - We would use a prediction interval
+  - If we were worried about $f(X)$ we would use a confidence interval
+
+10. Propose a model that has zero variance but high bias.
+
+11. Propose a model that has very low bias but high variance.
+  
+  
+  
+
+
+```{r}
+set.seed(1)
+
+n <- 100
+num_simulations <- 1000
+
+x <- seq(0, 5, length.out = n)
+
+beta0 <- 4
+beta1 <- 1
+beta2 <- 1
+
+sigma <- 1
+
+error <- rnorm(n, mean = 0, sd = sigma)
+
+y <- beta0 + beta1 * x + beta2 * x^2 + error
+
+train_set = data.frame(X,Y)
+
+M1 <- lm(y~x, data = train_set)
+M2 <- lm(y~poly(x, degree=2), data = train_set)
+M3 <- lm(y~poly(x, degree=3), data = train_set)
+M4 <- lm(y~poly(x, degree=5), data = train_set)
+M5 <- lm(y~poly(x, degree=11), data = train_set)
+
+yhat1 = yhat2 = yhat3 = yhat4 = yhat5 = rep(NA, 1000)
+
+for (i in 1:1000)
+{
+  error = rnorm(n,0,1)
+  y <- beta0 + beta1 * x + beta2 * x^2 + error
+
+  train_set = data.frame(x,y)
+  
+  M1 <- lm(y~x, data = train_set)
+  M2 <- lm(y~poly(x, degree=2), data = train_set)
+  M3 <- lm(y~poly(x, degree=3), data = train_set)
+  M4 <- lm(y~poly(x, degree=5), data = train_set)
+  M5 <- lm(y~poly(x, degree=11), data = train_set)
+  
+  yhat1[i] = predict(M1, data.frame(x=1))
+  yhat2[i] = predict(M2, data.frame(x=1))
+  yhat3[i] = predict(M3, data.frame(x=1))
+  yhat4[i] = predict(M4, data.frame(x=1))
+  yhat5[i] = predict(M5, data.frame(x=1))
+}
+
+x0 = rep(1, 1000)
+y0 = 1 + x0 + x0^2 + rnorm(1000, 0, 1)
+
+test = data.frame(x0, y0)
+
+mean((y0 - yhat1)^2)
+mean((y0 - yhat2)^2)
+mean((y0 - yhat3)^2)
+mean((y0 - yhat4)^2)
+mean((y0 - yhat5)^2)
+
+
+```
+
+```{r}
+
+```
+

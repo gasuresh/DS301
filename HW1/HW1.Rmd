@@ -1,0 +1,276 @@
+---
+title: "HW1"
+author: "Gautham Suresh"
+date: "2024-01-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+#install.packages("ISLR2") #you only need to do this one time.
+library(ISLR2)
+```
+
+```{r}
+auto <- read.table("Auto.data", header = TRUE)
+```
+
+### Problem 1: R review
+
+1a. Number of rows: 397, number of columns: 9
+
+```{r}
+auto <- auto %>%
+  filter_all(all_vars(. != "?")) %>%
+  na.omit()
+```
+
+1b. Number of rows: 392, number of columns: 9
+
+```{r}
+#1c.
+factor_columns <- sapply(df, is.factor)
+```
+
+1c. None of the columns are stored as factors. Factors are a data type used to represent categorical variables
+
+1d. "name" should be encoded as a factor variable. The "name" column contains repeated names for each year, since the same car model appears across multiple years. Converting it to a factor variable would help combine information based on car models across different years
+
+```{r}
+#1e
+print(head(auto, 10))
+```
+
+1e. Used the head R command
+
+```{r}
+#1f.
+print(auto[c(10, 14, 29), ])
+```
+
+```{r}
+#1g.
+auto[c(10, 14, 29), c("displacement", "horsepower")]
+```
+
+```{r}
+#1h.
+auto$horsepower <- as.numeric(auto$horsepower)
+result <- mean(auto %>% filter(horsepower < 200) %>% pull(mpg))
+```
+
+1h. Average mpg = 23.76. It can be computed in one line of code
+
+1i. A scatter plot is appropriate to examine the relationship between mpg and horsepower
+
+```{r}
+#1i
+ggplot(auto, aes(x = horsepower, y = mpg)) +
+  geom_point() +
+  labs(title = "Scatter Plot of mpg vs. hp",
+       x = "Horsepower",
+       y = "Miles per Gallon")
+
+```
+
+1j. A box plot per year is appropriate to examine the relationship between mpg and horsepower
+
+```{r}
+#1j.
+auto %>%
+  ggplot(aes(x = factor(year), y = acceleration)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "Box Plot of Acceleration by Year",
+       x = "Year",
+       y = "Acceleration")
+```
+
+1k. It means that the function is designed to perform operations on entire vectors as the input, rather than requiring you to loop through each element one by one
+
+### Problem 2: Multiple linear regression
+
+```{r}
+head(Boston)
+```
+
+2a. Number of rows: 506, number of columns: 13
+
+2b. "Lstat" represents the percentage of the population with lower socioeconomic status
+
+```{r}
+#2c. 
+average_crime_rate <- mean(Boston$crim)
+```
+
+2c. Average per capita crime rate: 3.62
+
+```{r}
+#2d.
+average_crim_rate_near_river <- mean(Boston$crim[Boston$chas == 1])
+average_crim_rate_not_near_river <- mean(Boston$crim[Boston$chas == 0])
+
+```
+
+2d. Average Crime Rate for Suburbs Near Charles River: 1.85. Average Crime Rate for Suburbs Not Near Charles River: 3.74. It is safer to be further away from the Charles River
+
+```{r}
+#2e.
+
+summary_stats <- Boston %>%
+  summarise(mean_crime = mean(crim),
+            sd_crime = sd(crim),
+            high_crime_threshold = mean(crim) + 2 * sd(crim))
+
+high_crime_threshold <- summary_stats$high_crime_threshold
+
+
+high_crime_suburbs <- Boston %>%
+  filter(crim > high_crime_threshold)
+
+```
+
+2e. There are suburbs with unusually high crime rates with values such as 88.97, 73.53, 67.92. The high crime rate threshold is 20.81, and is defined by values that are greater than 2 standard deviations from the mean. This covers approximately the top 3% of crime rate data entries
+
+```{r}
+#2f. 
+
+correlation_matrix <- cor(Boston)
+
+cor_with_crim <- correlation_matrix[,"crim"]
+
+```
+
+2f. Using the correlation matrix, we can find predictors that are associated with per capita crime rate. The correlation matrix highlights a few predictors with strong correlation such as rad, tax, and lstat, all of which are postively correlated
+
+1.  **rad (Index of Accessibility to Radial Highways):**
+    -   Correlation: 0.63
+    -   Description: There is a strong positive correlation between the index of accessibility to radial highways and per capita crime rate. Areas with higher accessibility to radial highways may have higher crime rates.
+2.  **tax (Full-Value Property-Tax Rate per \$10,000):**
+    -   Correlation: 0.58
+    -   Description: There is a strong positive correlation between the property-tax rate and per capita crime rate. This suggests that areas with higher property-tax rates may have higher crime rates.
+3.  **lstat (Lower Status of the Population):**
+    -   Correlation: 0.46
+    -   Description: There is a strong positive correlation between the lower status of the population and per capita crime rate. This indicates that areas with a higher percentage of lower-status population may have higher crime rates.
+
+```{r}
+#2g.
+
+lstat_model <- lm(crim ~ lstat, data = Boston)
+```
+
+2g.The coefficients are Intercept: -3.33, lstat: 0.55. The regression line is represented by the equation $crim=-3.33 +0.55*lstat$
+
+```{r}
+#2h.
+
+regression_results <- tibble()
+
+predictors <- names(Boston)[names(Boston) != "crim"]
+
+for (predictor in predictors) {
+  formula <- formula(paste("crim ~", predictor))
+  
+  model <- lm(formula, data = Boston)
+  
+  result <- tibble(
+    predictor = predictor,
+    intercept = coef(model)[1],
+    coefficient = coef(model)[2],
+    std_error = summary(model)$coefficients[2, "Std. Error"],
+    t_value = summary(model)$coefficients[2, "t value"],
+    p_value = summary(model)$coefficients[2, "Pr(>|t|)"],
+    R_squared = summary(model)$r.squared
+  )
+  
+  regression_results <- bind_rows(regression_results, result)
+}
+
+
+for (predictor in predictors) {
+  if (predictor != "chas") {
+    print(
+      ggplot(Boston, aes(x = .data[[predictor]], y = crim)) +
+        geom_point() +
+        geom_smooth(method = "lm", se = FALSE, color = "blue") +
+        labs(title = paste("Simple Linear Regression -", predictor),
+             x = predictor,
+             y = "crim")
+    )
+  }
+}
+
+```
+
+2h. **Simple Regression Model Analysis**
+
+The table `regression_results` contains relevant information for each predictor based on the generated simple regression model. It includes details about the intercept, coefficient, standard error, t-value, p-value, and R-squared values.
+
+The R-squared value can be used to identify models in which there is a significant association between the predictor and the response. The predictors *rad, tax, lstat* have high R-squared values, suggesting that the variations in `crim` are strongly associated with the levels of accessibility to radial highways (rad), full-value property-tax rates per \$10,000 (tax), and the percentage of lower status of the population (lstat)
+
+The plots show that the predictors with high R-squared values have closely-fit line, compared to the other predictors
+
+
+```{r}
+#2i.
+
+multiple_model <- lm(crim ~ ., data = Boston)
+
+coefficients <- coef(multiple_model)
+summary_info <- summary(multiple_model)
+
+
+multiple_results <- tibble(
+  predictor = names(coefficients),
+  coefficient = coefficients,
+  std_error = summary_info$coefficients[, "Std. Error"],
+  t_value = summary_info$coefficients[, "t value"],
+  p_value = summary_info$coefficients[, "Pr(>|t|)"],
+)
+
+
+```
+
+
+
+```{r}
+#2j.
+
+regression_results <- regression_results %>%
+  filter(predictor != "(Intercept)")
+
+combined_results <- bind_rows(
+  mutate(regression_results, model = "Simple Regression"),
+  mutate(multiple_results, model = "Multiple Regression")
+)
+
+# Plot comparing coefficients
+ggplot(combined_results, aes(x = predictor, y = coefficient, fill = model)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Comparison of Regression Coefficients",
+       x = "Predictor",
+       y = "Coefficient") +
+  theme_minimal()
+```
+
+2j. **Comparing Multiple Regression to Simple Regression**
+
+The multiple linear regression model, characterized by a multiple R-squared value of 0.45, demonstrates a stronger overall association between the predictors and the response when compared to the individual simple regression models generated for each predictor
+
+The bar plot offers insights into the coefficients across both model types. Often, the magnitudes of the coefficients for the simple regression models are larger than the multiple regression model. The signs for the coefficient also differ for the model types. The nox predictor is an example of this.
+
+
+
+2k. Simple linear regression models consider the relationship between one predictor and the response variable in isolation. They do not capture potential interactions or dependencies among multiple predictors. The multiple linear regression model captures the dependencies among these predictors. Part (j) shows evidence of this, with the improved r-squared value as well as the variation in coefficient values for the multiple linear regression model.
+
+
+### Problem 3: Interpreting Multiple Linear Regression Models
+
+3a. Option (ii) is the correct choice. X_3 represents the level (1 for College and 0 for High School). The linear regression equation is represented as $\hat{Y} = \hat{\beta_0} + \hat{\beta_1}X_1 + \hat{\beta_3}X_2 + \hat{\beta_3}X_3$. Since $X_2$ and $X_1$ are fixed, the variable that impacts the result is $X_3$. For college graduates $\hat{\beta_3}X_3 = 35$ while for high school graduates $\hat{\beta_3}X_3 = 0$. Since the value is greater for college graduates, college graduates earn more, on average, than high school graduates
+
+3b.$\hat{Y} = \hat{\beta_0} + \hat{\beta_1}X_1 + \hat{\beta_3}X_2 + \hat{\beta_3}X_3 = 50 + 20(4.0) + 0.07(110) + 35(1) = 172.7 \Rightarrow Salary = \$172,700$
+
+3c. False. The statement that the coefficient of IQ is very small does not necessarily imply that the effect of IQ on salary is not important. Since the scale of the potential values for IQ is larger than GPA or Level, it still plays a large role in the results

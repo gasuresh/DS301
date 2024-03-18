@@ -1,0 +1,229 @@
+---
+title: "HW4"
+author: "Gautham Suresh"
+date: "2024-02-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(caret)
+library(ISLR2)
+```
+
+### Problem #1
+
+1a. Without hypothesis testing, we might accept any coefficient estimate as meaningful, simply because it's not exactly zero. However, this could lead to both false positives and false negatives. By performing hypothesis testing, we establish a threshold to determine whether the evidence supports rejecting the null hypothesis in favor of the alternative hypothesis. This helps to minimize the chances of drawing incorrect conclusions from the data. In this case, the collaborator believes that $\hat{\beta}_3$ is different from 0 because the estimate is not 0. If we conduct the hypothesis test, we actually arrive at the opposite conclusion. Since the p-value for $x_3$ is much higher than the general threshold (0.05), we do not reject $H_0$, meaning we do not have enough evidence that $\beta_j$ is significantly different from 0. This highlights the importance of hypothesis testing, as without conducting this test we would have accepted a false negative.
+
+1b. I agree with this statement. Since we have the true function, we can perfectly fit the model to the data and it will also generalize perfectly to new data points
+
+1c. The statement is false. The statement that $y_0$ is from the training set is incorrect. Since we are calculating the test MSE, $y_0$ should data from the test set.
+
+1d. The statement is true. In some cases, reducing the complexity of a model, such as by removing a predictor or simplifying the model structure, can lead to a decrease in variance. This is because a simpler model is less likely to overfit the training data, resulting in a model that works better on unseen data. Even though reducing complexity may increase bias (by making the model less flexible), the decrease in variance can sometimes outweigh the increase in bias, leading to an overall improvement in expected test MSE.
+
+1e. The statement is false. The expected test MSE can never be smaller than the irreducible error. The expected test MSE includes contributions from both the model error (bias and variance) and the irreducible error. Since irreducible error is included in the test MSE calculations, the test MSE can never be smaller.
+
+1d. The statement is true. The training MSE can be smaller than the irreducible error if the model fits the data very well, potentially overfitting it
+
+```{r}
+#2a.
+knitr::include_graphics("bv_sketch.png")
+```
+
+2b. **Terms**
+
+-   *Expected Test MSE*
+    -   A measure of how well our model performs on new, unseen data. It calculates the average squared difference between the predictions made by our model and the actual values in the test dataset. A lower value indicates that the model is better at making predictions on new data
+-   *Training MSE*
+    -   Similar to the test MSE, the training MSE measures how well our model fits the data it was trained on. It calculates the average squared difference between the predictions made by our model and the actual values in the training dataset. A lower value indicates that the model fits the training data better.
+-   *Bias*
+    -   Represents how much the average prediction of the model differs from the true value
+-   *Variance*
+    -   Refers to the variability of model predictions for a given data point. It measures how much the predictions for a given point differ from one another
+-   *Irreducible Error*
+    -   Irreducible error is the error that cannot be reduced by improving the model further. It's essentially the randomness inherent in the data itself
+
+2c. **Curves**
+
+-   *Expected Test MSE*
+    -   Expected Test MSE is the combination of bias and variance (bias + variance) and typically follows a U-shaped curve because of this calculation.
+-   *Training MSE*
+    -   Training MSE tends to decrease with flexibility. More flexible models can better fit the training data, leading to lower training MSE.
+-   *Bias*
+    -   As flexibility increases, bias tends to decrease. Less flexible models may have high bias because they oversimplify the underlying data. As models become more flexible, they can capture more complex patterns in the data, leading to lower bias. This matches the curve we see in the sketch.
+-   *Variance*
+    -   Variance tends to increase with flexibility. Less flexible models have lower variance because they are not able to capture complex patterns and are more stable. More flexible models can capture finer details in the data, leading to higher variance. This matches the curve we see in the sketch.
+-   *Irreducible Error*
+    -   Irreducible error is the error that cannot be reduced by improving the model further. This means it remains constant regardless of the flexibility of the model
+
+2d. We do not have enough information tell if the cubic regression model or linear regression model has a lower training MSE. Since the true relationship between $X$ and $Y$ is linear, the cubic regression model is likely to overfit the data compared to the linear regression model. This could potentially lead to lower training MSE as this value tends to decrease with flexibility. However, we also know the true relationship to be linear. This could potentially mean that the linear model fits the data better, leading to a lower training MSE
+
+2e. We can expect the linear regression model to have a lower test MSE compared to the cubic regression model. This is because we know the true relationship to be linear, and we can expect the linear regression model to predict the values better. As we stated before, the cubic model runs the risk of overfitting, meaning that it will perform poorly with new data, leading to a higher test MSE.
+
+### Problem 3: Optimal degree for Boston dataset
+
+```{r}
+degrees <- 1:9
+
+results <- data.frame(Degree = degrees, CV_Error = numeric(length(degrees)))
+
+set.seed(1)
+folds <- createFolds(Boston$medv, k = 5)
+
+for (d in degrees) {
+  fold_errors <- numeric(length(folds))
+  
+  for (i in seq_along(folds)) {
+    
+    test_index = folds[[i]]
+    
+    
+    train_data <- Boston[-test_index, ]
+    test_data <- Boston[test_index, ]
+    
+    model <- lm(medv ~ poly(lstat, d, raw = TRUE), data = train_data)
+    
+    valid_pred <- predict(model, newdata = test_data)
+    
+    fold_errors[i] <- mean((test_data$medv - valid_pred)^2)
+  }
+  
+  results$CV_Error[results$Degree == d] <- mean(fold_errors)
+}
+
+ggplot(results, aes(x = Degree, y = CV_Error)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "Polynomial Degree", y = "Cross-Validated Error",
+       title = "Cross-Validated Error (MSE) vs. Polynomial Degree")
+
+optimal_degree <- results$Degree[which.min(results$CV_Error)]
+
+```
+
+3.  We choose degree 5 since it has the lowest error
+
+### Problem 4: Cross-validation
+
+4a. *K-fold Cross-validation steps*
+
+-   The first step is to divide the dataset into k subsets of approximately equal size. These subsets are referred to as folds.
+-   The next step involves iterating through each fold. For each iteration, one fold is used as the testing set, and the remaining k-1 folds are used as the training set.
+-   The model is trained using the training set (k-1 folds) and evaluated on the testing set (selected fold)
+-   The process is repeated k times, with each of the k folds used exactly once as the testing set
+-   Finally, the results obtained from each fold are averaged to obtain a single result for the model
+
+4b. Advantages and disadvantages of k-fold cross-validation relative to:
+
+-   The validation set approach
+    -   Advantages
+        -   The validation set approach involves dividing the dataset into two parts: training and validation sets. This can lead to a waste of valuable data for training or validation, especially with smaller datasets. K-fold CV utilizes the entire dataset for both training and validation
+        -   A single train-test split could have higher variance. By averaging the results over k folds, it reduces variance
+    -   Disadvantages
+        -   K-fold CV is computationally more expensive as it requires fitting the model k times
+        - K-fold CV may introduce variability in the results depending on how the folds are partitioned
+-   LOOCV
+    -   Advantages
+      - K-fold CV provides a balance between bias and variance in estimating model performance
+      - K-fold CV is generally computationally less expensive than LOOCV
+    -   Disadvantages
+        -   LOOCV will give approximately unbiased estimates of the test error while k-fold has an intermediate level of bias
+        - K-fold CV with a small k value may not fully capture the variability in the dataset compared to LOOCV
+        
+```{r}
+#4b.
+set.seed(1)
+x <- rnorm(100)
+error <- rnorm(100, mean = 0, sd = 1^2)
+y <- x - 2 * x^2 + error
+```
+
+
+```{r}
+#4c.
+
+data <- data.frame(X = x, Y = y)
+
+n <- nrow(data)
+
+LOOCV_errors <- numeric(4)
+
+for (i in 1:4) {
+  squared_error <- numeric(n)
+  
+  if (i == 1) {
+    model_formula <- as.formula(paste("Y ~ X"))
+  } else {
+    model_formula <- as.formula(paste("Y ~ poly(X, ", i, ")", sep = ""))
+  }
+  
+  for (j in 1:n) {
+    train <- data[-j,]
+    test <- data[j,]
+    
+    model_leave_one_out <- lm(model_formula, data = train)
+    
+    Y_predicted <- predict(model_leave_one_out, newdata = test)
+    
+    squared_error[j] <- (data$Y[j] - Y_predicted)^2
+  }
+  
+  LOOCV_errors[i] <- mean(squared_error)
+}
+
+smallest_error_model <- which.min(LOOCV_errors)
+
+```
+
+```{r}
+#4d.
+
+set.seed(2)
+x <- rnorm(100)
+error <- rnorm(100, mean = 0, sd = 1^2)
+y <- x - 2 * x^2 + error
+
+data <- data.frame(X = x, Y = y)
+
+n <- nrow(data)
+
+LOOCV_errors <- numeric(4)
+
+for (i in 1:4) {
+  squared_error <- numeric(n)
+  
+  if (i == 1) {
+    model_formula <- as.formula(paste("Y ~ X"))
+  } else {
+    model_formula <- as.formula(paste("Y ~ poly(X, ", i, ")", sep = ""))
+  }
+  
+  for (j in 1:n) {
+    train <- data[-j,]
+    test <- data[j,]
+    
+    model_leave_one_out <- lm(model_formula, data = train)
+    
+    Y_predicted <- predict(model_leave_one_out, newdata = test)
+    
+    squared_error[j] <- (data$Y[j] - Y_predicted)^2
+  }
+  
+  LOOCV_errors[i] <- mean(squared_error)
+}
+```
+
+4e. The results obtained with a different random seed are different from the results obtained previously. This is because each random seed leads to a different set of random numbers being generated, which in turn affects the data splitting process and the initial conditions.
+
+4f. $M2$ had the smallest LOOCV error. This is what I expected. It is reasonable that $M2$: the polynomial regression model with degree 2 would perform the best in capturing the true relationship between X and Y as $Y = X − 2X^2 + \epsilon$, with $\epsilon ∼ N (0, 1^2)$ is also quadratic.
+
+4g.  LOOCV computes the average error across all iterations. This average helps in reducing the variability in the estimate of the test error. By averaging over multiple iterations, LOOCV provides a more stable estimate, leading to approximately unbiased estimates of the test error
+
+4h. As k increases in k-fold cross-validation, the bias of the test error typically decreases.This is because as k increases, each fold in k-fold cross-validation contains a smaller proportion of the total dataset. The training dataset grows in size however. This allows the model to learn from more diverse samples of the data, reducing the chance of high bias
+
+4i. As k increases in k-fold cross-validation, the variance of the test error typically increases. This is because with larger values of k, the training sets become larger, leading to higher variability in the model's performance across different folds. With more folds, each model is trained on a larger portion of the dataset, but this portion may not represent the overall dataset well due to the smaller size of each fold, leading to higher variance.
+

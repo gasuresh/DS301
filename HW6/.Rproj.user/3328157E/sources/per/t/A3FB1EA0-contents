@@ -1,0 +1,273 @@
+---
+title: "HW6"
+author: "Gautham Suresh"
+date: "2024-03-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(leaps)
+library(ISLR2)
+library(tidyverse)
+```
+
+### Problem #1
+
+1a. It is not true that $M_{k+1}$ must contain a subset of the predictors found in $M_k$. Best subset selection performs an exhaustive search of all possible combinations of predictors. Since any combination of predictors can be chosen, the predictors chosen can be independent of the previous model. For example, if $M_2$ contains $X_1$ and $X_2$, $M_{2+1} = M_{3}$ does not necessarily need to contain $X_1$ or $X_2$. It could instead contain $X_3, X_4, X_5$ for example, since all possible combinations are considered before settling on the best model of size 3
+
+1b. In the case of forward stepwise selection, the statement is true. Forward stepwise selection starts with no variables $(M_0)$ and iteratively adds the single variable that leads to the most significant improvement in the model's fit. Once a variable is added to a model in forward selection, it remains in all subsequent models $(M_{k+1}, M_{k+2}, etc.)$. This is because the goal is to find the best model with each additional predictor, not to completely rebuild the model from scratch at each step
+
+1c. **Training MSE**
+
+-   $k = 1$
+    -   Subset Selection: This is guaranteed to select the single predictor with the smallest model fitting error, leading to the smallest training MSE
+    -   Forward Selection: Also guaranteed to select the single predictor with the smallest model fitting error, leading to the smallest training MSE
+    -   Backward Selection: This method starts with all predictors and removes the one with the least impact on the model's performance. It might mistakenly remove the best single predictor, potentially leading to a larger training MSE compared to the other two methods
+-   $k = p$
+    -   When $k = p$, which means we are using all $p$ predictors, the training MSE for all three methods (best subset, forward selection, and backward selection) should be the same
+-   $k = p - 1$
+    -   Subset Selection: This is guaranteed to select the single predictor with the smallest model fitting error, since it checks all possible combinations, leading to the smallest training MSE
+    -   Forward Selection: It's likely to have a smaller training MSE than Backward selection due to its iterative approach, but potentially larger than the best subset
+    -   Backward Selection: It's prone to removing important predictors, potentially leading to the largest training MSE among the three methods for $k = p-1$
+-   $k = 1,\ldots,p$
+    -   Based on the above responses, for a given $k$, subset selection would identify the model $M_{k,subset}$ with the smallest training MSE. This is because subset selection considers all possible predictor combinations for any $k$
+
+1d. **Test MSE**
+
+- Since subset selection tends to overfit (it considers all possible models), it might not perform well on the test data, leading to larger test MSE compared to forward and backward selections. There is also the situation where it is able to identify the best model that generalizes to unseen data, since it does consider all of the possibilities
+- Forward and backward selections, by considering fewer combinations of predictors, might result in models with better generalization performance, and thus, potentially smaller test MSE
+
+
+### Problem #2
+
+```{r}
+
+#2a.
+set.seed(3)
+
+p <- 20
+n <- 1000
+
+error <- rnorm(n, 0, 1)
+
+beta <- c(2, rep(0, 5), 1.2, 3, -2, 1.5, 7, rep(0, 5), 3, 4, 1, 9, 2)
+
+Xmat <- matrix(rnorm(n * p), n, p)
+
+X <- cbind(rep(1, n), Xmat)
+
+Y <- X %*% beta + error
+
+data <- data.frame(Y, Xmat)
+
+
+train_indices <- sample(1:n, 100)
+train_data <- data[train_indices, ]
+test_data <- data[-train_indices, ]
+```
+
+
+```{r}
+#2b.
+
+best_train <- regsubsets(Y ~ ., data = train_data, nvmax = p)
+
+train_errors <- rep(NA, p)
+
+for (i in 1:p)
+{
+  train_mat <- model.matrix(Y ~ ., data = train_data)
+  
+  coef_m <- coef(best_train, id = i)
+  pred <- train_mat[, names(coef_m)] %*% coef_m
+  train_errors[i] <- mean((pred - train_data$Y)^2)
+  
+}
+
+plot(1:p, train_errors, type = "b", xlab = "Number of Predictors", ylab = "Training MSE")
+
+
+```
+
+```{r}
+#2c.
+
+test_errors <- rep(NA, p)
+
+for (i in 1:p) {
+  test_mat <- model.matrix(Y ~ ., data = test_data)
+  
+  coef_m <- coef(best_train, id = i)
+  pred_test <- test_mat[, names(coef_m)] %*% coef_m
+  test_errors[i] <- mean((pred_test - test_data$Y)^2)
+}
+
+plot(1:p, test_errors, type = "b", xlab = "Number of Predictors", ylab = "Test MSE")
+
+```
+
+```{r}
+#2d.
+best_model_index <- which.min(test_errors)
+```
+
+2d. The model with 10 predictors has the lowest test MSE. We see a general trend that test MSE is much higher with less than 10 predictors
+
+```{r}
+#2e.
+coef_m <- coef(best_train, which.min(test_errors))
+
+beta_selected <- beta[c(6:11, 17:21)]
+
+
+```
+
+2e. We see that the model at which the test MSE is minimized has a coefficient value that is similar to the true value. We see that the predicted coefficients are less accurate to the true values for predictors less than $X_10$, which matches the plot
+
+
+### Problem #3
+
+```{r}
+#3a.
+
+p <- 17
+
+train_index <- sample(1:nrow(College), 0.9 * nrow(College))
+train_data <- College[train_index, ]
+test_data <- College[-train_index, ]
+
+regfit_fwd <- regsubsets(Apps~.,data=College,nvmax=p, nbest = 1, method="forward")
+regfit_bwd <- regsubsets(Apps~.,data=College,nvmax=p, method="backward")
+
+forward_test_errors <- rep(NA, p)
+backward_test_errors <- rep(NA, p)
+
+for (i in 1:p) {
+  forward_test_mat <- model.matrix(Apps ~ ., data = test_data)
+  
+  coef_m <- coef(regfit_fwd, id = i)
+  pred_test <- forward_test_mat[, names(coef_m)] %*% coef_m
+  forward_test_errors[i] <- mean((pred_test - test_data$Apps)^2)
+  
+  backward_test_mat <- model.matrix(Apps ~ ., data = test_data)
+  
+  coef_m <- coef(regfit_bwd, id = i)
+  pred_test <- backward_test_mat[, names(coef_m)] %*% coef_m
+  backward_test_errors[i] <- mean((pred_test - test_data$Apps)^2)
+}
+
+min_mse_forward <- which.min(forward_test_errors)
+
+min_mse_backward <- which.min(backward_test_errors)
+
+
+```
+
+3a. For both forward selection and backward selection, $M_13$ minimizes test MSE
+
+
+```{r}
+regfit_fwd_full <- regsubsets(Apps ~ ., data = College, nvmax = p, method = "forward")
+summary_fwd_full <- summary(regfit_fwd_full)
+
+regfit_bwd_full <- regsubsets(Apps ~ ., data = College, nvmax = p, method = "backward")
+summary_bwd_full <- summary(regfit_bwd_full)
+
+
+n <- dim(College)[1]
+p <- rowSums(summary_fwd_full$which)
+
+fwd_adjr2 <- summary_fwd_full$adjr2
+fwd_cp <- summary_fwd_full$cp
+fwd_rss <- summary_fwd_full$rss
+fwd_AIC <- n*log(fwd_rss/n) + 2*(p)
+fwd_BIC <- n*log(fwd_rss/n) + (p)*log(n)
+
+fwd_subset_table <- data.frame(RSS = fwd_rss, Adj_R2 = fwd_adjr2, Cp = fwd_cp, AIC = fwd_AIC, BIC = fwd_BIC)
+
+
+n <- dim(College)[1]
+p <- rowSums(summary_bwd_full$which)
+
+bwd_adjr2 <- summary_bwd_full$adjr2
+bwd_cp <- summary_bwd_full$cp
+bwd_rss <- summary_bwd_full$rss
+bwd_AIC <- n*log(bwd_rss/n) + 2*(p)
+bwd_BIC <- n*log(bwd_rss/n) + (p)*log(n)
+
+bwd_subset_table <- data.frame(RSS = bwd_rss, Adj_R2 = bwd_adjr2, Cp = bwd_cp, AIC = bwd_AIC, BIC = bwd_BIC)
+
+
+best_model_fwd <- which.min(fwd_subset_table$AIC)
+
+best_model_bwd <- which.min(bwd_subset_table$AIC)
+```
+
+3b. For both forward selection and backward selection, the best model, based on AIC, is $M_2$
+
+3c. We will use the Bias-Variance tradeoff to decide which model to choose. Models with more parameters tend to have lower training error because they can capture more complex patterns in the data. However, this may lead to overfitting and higher variance. Simpler models with fewer parameters, even if they have slightly higher training error, may generalize better to new data. Therefore we will choose $M_2$ as it most likely generalizes better to new data
+
+### Problem #4
+
+The individual p-values based on the t-tests for the predictors are much larger than the p-value produced by the f-test. The situation is a case of multicollinearity where the predictors are highly correlated. High collinearity means that when you try and fit the model, you could potentially get a different set of solutions each time for the predicted values, as there is no unique set of least square solutions.
+
+### Problem #5
+
+```{r}
+str(Credit)
+```
+
+```{r}
+fit <- lm(Balance ~ Income + Student, data = Credit)
+
+summary(fit)
+```
+```{r}
+fit_students <- lm(Balance ~ Income + Student, data = Credit)
+fit_non_students <- lm(Balance ~ Income, data = Credit)
+
+summary(fit_students)
+summary(fit_non_students)
+
+```
+
+
+5c. The non-student model would not include StudentYes as it is a dummy variable in this situation. It would be included for the student model.
+
+- Student Model: $Y ~ \beta_0 + \beta_1X_1 + \beta_2X_2$
+- Non-Student Model: $Y ~ \beta_0 + \beta_1X_1$
+
+5d. Since $\beta_1$ for **fit_students** is positive, it indicates that as income increases, the credit card balance tends to increase among students. We see that the case is the same for non-students. However we can also see that the regression coefficient for Income for non-students is higher. This means that Balance increases more as Income increases compared to students
+
+```{r}
+#5e.
+
+ggplot(data = Credit, aes(x = Income, y = Balance, color = Student)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Income vs Balance for Students",
+       x = "Income", y = "Balance") +
+  theme_minimal()
+
+```
+
+5e. Since the slopes for Income vs Balance is different for students and non-students, it is not a reasonable constraint
+
+```{r}
+#5f.
+
+lm(Balance ~ Income + Student + Income:Student, data = Credit)
+
+```
+5f. **Models**
+
+- Student Model: $Y ~ \beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_1X_2$
+- Non-Student Model: $Y ~ \beta_0 + \beta_1X_1$
+
+5g. For each one-unit increase in Income, the estimated credit card balance increases by \$6.22, holding other variables constant. We see that if the person is also a student, Income also decreases by \$-2.00 (based on Income:StudentYes)
+
+
+
+
+

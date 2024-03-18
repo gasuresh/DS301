@@ -1,0 +1,7 @@
+"0","smallest_bias_model <- which.min(squared_bias)"
+"0",""
+"0","print(smallest_bias_model)"
+"1","[1]"
+"1"," 3"
+"1","
+"

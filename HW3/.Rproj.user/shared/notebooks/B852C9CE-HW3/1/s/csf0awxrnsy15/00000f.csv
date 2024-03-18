@@ -1,0 +1,2 @@
+"0","#1c."
+"0","sigma_sqr <- sum(model$residual^2)/(n-(p+1))"

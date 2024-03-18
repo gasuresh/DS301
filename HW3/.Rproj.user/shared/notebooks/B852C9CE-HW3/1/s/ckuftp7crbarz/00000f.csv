@@ -1,0 +1,8 @@
+"0","#1a."
+"0","model <- lm(Sales ~ CompPrice + Income + Advertising + Population + Price + Age + Education + Urban + US, data = Carseats)"
+"0",""
+"0","coefficients_table <- as.data.frame(summary(model)$coefficients[, c(""Estimate"", ""Std. Error"")])"
+"0",""
+"0","rownames(coefficients_table)[rownames(coefficients_table) == ""UrbanYes""] <- ""Urban"""
+"0","rownames(coefficients_table)[rownames(coefficients_table) == ""USYes""] <- ""US"""
+"0",""

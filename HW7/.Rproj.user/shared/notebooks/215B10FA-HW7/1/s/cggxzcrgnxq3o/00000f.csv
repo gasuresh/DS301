@@ -1,0 +1,5 @@
+"0","insurance <- read.csv(""./insurance.csv"")"
+"0",""
+"0","insurance$gender <- factor(insurance$gender)"
+"0","insurance$smoker <- factor(insurance$smoker)"
+"0","insurance$region <- factor(insurance$region)"

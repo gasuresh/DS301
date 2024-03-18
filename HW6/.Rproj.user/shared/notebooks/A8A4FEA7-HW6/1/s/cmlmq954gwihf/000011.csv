@@ -1,0 +1,6 @@
+"0","#2e."
+"0","coef_m <- coef(best_train, which.min(test_errors))"
+"0",""
+"0","beta_selected <- beta[c(6:11, 17:21)]"
+"0",""
+"0",""

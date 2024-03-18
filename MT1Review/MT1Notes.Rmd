@@ -1,0 +1,147 @@
+---
+title: "MT1Notes"
+author: "Gautham Suresh"
+date: "2024-02-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Intro MLR
+
+-   $(Y, X_1, X_2, \ldots, X_p)$
+
+-   Y is our response (outcome of interest), X’s are our predictors.
+
+-   $Y = f(X) + \epsilon$
+
+    -   $X = (X_1, X_2, \ldots, X_p)$
+    -   The function f captures the systematic relationship between X and Y
+    -   f is fixed and unknown
+    -   $\epsilon$ represents randomness (inherent variability)
+
+-   Multiple linear regression (more than one predictor)
+
+-   Simple linear regression (only one predictor)
+
+-   Regression setup: $$Y_i = f(X_i) + \epsilon_i, \quad i = 1,\ldots,n$$
+
+-   If we are willing to make a key assumption that the relationship between X and Y is approximately linear, then
+
+$$f(X_i) = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + \ldots \beta_pX_{ip} \text{ (true relationship)}$$
+- Population regression line: $$Y_i = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + \ldots \beta_pX_{ip} + \epsilon_i$$
+  - $\beta_0, \beta_1, \ldots, \beta_p$ are unknown (b/c they represent one true relationship) - we call these parameters
+
+- **Assumptions**
+  - Relationship between $Y$ and $X = (X_1, X_2, \ldots, X_p)$ is approximately linear
+  - $E(\epsilon) = 0$
+  - $Var(\epslion) = \sigma^2$ : constant variance
+  - $\epsilon$'s are uncorrelated (one observation does not affect another observation)
+
+- How to obtain data-driven estimates for $\hat{\beta}$ from our dataset
+  - Suppose $Y = B_0 + B_1X_1 + \epsilon$
+  - We estimate $\hat{B}_0$ and $\hat{B}_1$ from the data
+  - $\hat{Y} = \hat{B}_0 + \hat{B}_1X_1$
+  - Once I have $\hat{B}_0$ and $\hat{B}_1$, I can predict $\hat{Y}$
+
+- Find $\hat{B}_0$ and $\hat{B}_0$ that minimizes Residual Sum of Squares (RSS)
+- $$RSS = \sum_{i=1}^{n} (Y_i - (\hat{B}_0 + \hat{B}_1X_{i1} + \cdots + \hat{B}_pX_{ip})^2$$
+
+### Properties Least Sq
+
+- How do we evaluate how good our model is at prediction? ($\hat{Y}$)
+  - We use MSE
+  - $MSE = \frac{1}{n} \sum_{i=1}^{n} (Y_i - \hat{Y}_i)^2 = \frac{RSS}{n}$
+  - Where n is num observation
+
+- In the regression setting, the most commonly-used measure is the
+mean squared error (MSE), given by $$MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{f}(x_i))^2$$
+- Suppose $(x_i,y_i), i = 1,\ldots,n$ represents our training data. $\hat{f}$ is estimated from training data. Training MSE is then: $$\frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{f}(x_i))^2$$
+- Suppose $(x_i',y_i'), i = 1,\ldots,n$ represents our test data. $\hat{f}$ is estimated from training data. Test MSE is then: $$\frac{1}{n} \sum_{i=1}^{n} (y_i' - \hat{f}(x_i'))^2$$
+
+- Assuming linear approximation holds, the least square estimates $\hat{B}$ are unbiased estimates of the true population parameters $B$
+
+- Formal def of unbiased: $E(\hat{\beta}) = B$
+- $E(\hat{Y}) \neq Y$ since it does not include $\epsilon$
+- $se(\hat{\beta})$: standard error of $\hat{\beta}$
+  - How far off a single estimate is from the truth (variability)
+  - Tells us avg amount that $\hat{\beta}$ differs from $B$
+
+### MLR Inference
+
+- Unbiasedness: $E(\hat{\beta}_j) = \beta_j$
+- Standard error: $se(\hat{\beta}_j)$ Tells us avg amount that $\hat{\beta}_j$ differs from $\beta_j$
+
+- Hypothesis Testing
+  - Null/alternative hypothesis: $H_0: \beta_{j} = 0$, $H_1: \beta_{j} \neq 0$ 
+  - Test statistic: $\frac{\hat{\beta}_j}{se(\hat{\beta}_j)}$
+  - Null distribution: Distribution of the test statistic. df(degrees of freedom): $df = n - (p+1)$
+  - Compute the p-value: probability of observing our test statistic, assuming $H_0$ is true
+  - Conclusion: decide whether or not to reject the null
+
+- Significance level: $\alpha$. If p-value $< \alpha$, then reject $H_0$
+- If we can reject $H_0$, we say our results are statistically significant
+
+- If we reject $H_0$ , that means we have evidence that $\beta_j$ is
+significantly different from 0, at significance level $\alpha$
+- If we do not reject $H_0$ , that means we do not have evidence that $\beta_j$
+is significantly different from 0, at significance level $\alpha$
+
+- 2 sources of uncertainty associated with a prediction
+  - Reducible error
+  - Irreducible error
+  
+- We can compute a confidence interval in order to quantify our
+uncertainty around estimating $f(X)$
+  - Only takes into account reducible error
+- We can compute a prediction interval in order to quantify our
+uncertainty around predicting $Y$
+  - Takes into account irreducible error and reducible error
+
+- We use a confidence interval to quantify the uncertainty
+surrounding the average patient score ($f(X)$) given a set of predictors.
+
+- We use a prediction interval to quantify the uncertainty
+surrounding the satisfaction score for a particular patient ($(Y)$) given a
+set of predictors
+
+
+### Multiple Testing
+
+- Testing each $\beta_j$ separately vs testing them together
+- Individually
+  - Carry out p hypothesis tests
+  - If any of the individual tests is significant (p-value < $\alpha$), then
+this means at least one of the predictors is related to $Y$, especially when the number of predictors p is large
+  - Every time we carry out a test, there is always a chance we
+make a mistake
+  - One type of mistake is called type 1 error: we reject $H_0$ , but
+we shouldn’t have
+
+- Multiple testing problem
+  - When we carry out a large number of hypothesis tests, we are
+bound to get some very small p-values by chance
+  - If we make a decision about whether or not to reject each
+hypothesis test, without taking into account the fact that we
+have performed a large number of tests, we may end up
+making a large number of type 1 errors
+
+- Instead use an F-test which considers all of the predictors together (global test)
+  - Overall F-test: this is a single test and it takes into account the
+number of predictors in our model.
+    - Idea: compare the residual sum of squares (RSS) from the full
+model (with all predictors of interest) versus the residual sum
+of squares from the null model (model with no predictors)
+
+- F-test conclusion
+  - If we do not reject $H_0$ : we do not find evidence of any
+significance relationship between $Y$ and at least one of the
+predictors, at significant level $\alpha$
+  - If we reject $H_0$ : we find evidence of a relationship between $Y$
+and at least one of the predictors, at significance level $\alpha$
+
+### Bias Variance Tradeoff
+
+### Cross Validation
